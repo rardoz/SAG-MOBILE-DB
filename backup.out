@@ -1,0 +1,395 @@
+--
+-- PostgreSQL database cluster dump
+--
+
+SET default_transaction_read_only = off;
+
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+
+--
+-- Roles
+--
+
+CREATE ROLE apple;
+ALTER ROLE apple WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION;
+
+
+
+
+
+
+--
+-- Database creation
+--
+
+CREATE DATABASE apple WITH TEMPLATE = template0 OWNER = apple;
+CREATE DATABASE sandbox WITH TEMPLATE = template0 OWNER = apple;
+REVOKE ALL ON DATABASE template1 FROM PUBLIC;
+REVOKE ALL ON DATABASE template1 FROM apple;
+GRANT ALL ON DATABASE template1 TO apple;
+GRANT CONNECT ON DATABASE template1 TO PUBLIC;
+
+
+\connect apple
+
+SET default_transaction_read_only = off;
+
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: apple
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM apple;
+GRANT ALL ON SCHEMA public TO apple;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\connect postgres
+
+SET default_transaction_read_only = off;
+
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: postgres; Type: COMMENT; Schema: -; Owner: apple
+--
+
+COMMENT ON DATABASE postgres IS 'default administrative connection database';
+
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: adminpack; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS adminpack WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION adminpack; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION adminpack IS 'administrative functions for PostgreSQL';
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: apple
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM apple;
+GRANT ALL ON SCHEMA public TO apple;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\connect sandbox
+
+SET default_transaction_read_only = off;
+
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = public, pg_catalog;
+
+--
+-- Name: rows_to_json(text); Type: FUNCTION; Schema: public; Owner: apple
+--
+
+CREATE FUNCTION rows_to_json(arg_sql text) RETURNS json
+    LANGUAGE plpgsql
+    AS $$DECLARE
+    retval json;
+    sql_string text;
+BEGIN
+    sql_string :='
+         SELECT array_to_json ( array_agg( results ) )
+         FROM 
+         (
+	    SELECT* FROM '|| arg_sql  ||'
+         ) results
+    ';
+        
+    EXECUTE sql_string
+    INTO retval;
+    RETURN retval::json; 
+END$$;
+
+
+ALTER FUNCTION public.rows_to_json(arg_sql text) OWNER TO apple;
+
+--
+-- Name: FUNCTION rows_to_json(arg_sql text); Type: COMMENT; Schema: public; Owner: apple
+--
+
+COMMENT ON FUNCTION rows_to_json(arg_sql text) IS 'similar to row_to_json except no need for select* from. example select* from row_to_json(arg_sql:= ''test(1)'')';
+
+
+--
+-- Name: test_create(text); Type: FUNCTION; Schema: public; Owner: apple
+--
+
+CREATE FUNCTION test_create(arg_name text) RETURNS json
+    LANGUAGE plpgsql
+    AS $$DECLARE
+   retval json;
+   sql_prepare text;
+   new_id bigint;
+BEGIN
+   INSERT INTO test (name) VALUES (arg_name) RETURNING id INTO new_id; 
+   sql_prepare := ' test WHERE id = ' || new_id;
+   SELECT* FROM rows_to_json( arg_sql:= sql_prepare ) into retval;
+   RETURN retval;
+END$$;
+
+
+ALTER FUNCTION public.test_create(arg_name text) OWNER TO apple;
+
+--
+-- Name: test_get(text); Type: FUNCTION; Schema: public; Owner: apple
+--
+
+CREATE FUNCTION test_get(arg_name text DEFAULT NULL::text) RETURNS json
+    LANGUAGE plpgsql
+    AS $$DECLARE
+ retval json;
+ sql_prepare text;
+BEGIN
+  IF(arg_name IS NOT NULL) THEN
+
+      sql_prepare:= ' test where name = ''' || quote_ident(arg_name) || '''';
+      SELECT* FROM rows_to_json(arg_sql:= sql_prepare ) INTO retval;
+  ELSE
+      sql_prepare:= ' test';
+      SELECT* FROM rows_to_json(arg_sql:= sql_prepare ) INTO retval;
+  END IF;
+ RETURN retval;
+END$$;
+
+
+ALTER FUNCTION public.test_get(arg_name text) OWNER TO apple;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: test; Type: TABLE; Schema: public; Owner: apple; Tablespace: 
+--
+
+CREATE TABLE test (
+    id integer NOT NULL,
+    name text
+);
+
+
+ALTER TABLE public.test OWNER TO apple;
+
+--
+-- Name: test_id_seq; Type: SEQUENCE; Schema: public; Owner: apple
+--
+
+CREATE SEQUENCE test_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.test_id_seq OWNER TO apple;
+
+--
+-- Name: test_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: apple
+--
+
+ALTER SEQUENCE test_id_seq OWNED BY test.id;
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: apple
+--
+
+ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('test_id_seq'::regclass);
+
+
+--
+-- Data for Name: test; Type: TABLE DATA; Schema: public; Owner: apple
+--
+
+COPY test (id, name) FROM stdin;
+1	test
+2	testw
+3	testwwww
+4	test
+5	123
+6	123
+7	123
+8	123
+9	123
+10	123
+11	test
+12	testerererer
+\.
+
+
+--
+-- Name: test_id_seq; Type: SEQUENCE SET; Schema: public; Owner: apple
+--
+
+SELECT pg_catalog.setval('test_id_seq', 12, true);
+
+
+--
+-- Name: primary_id; Type: CONSTRAINT; Schema: public; Owner: apple; Tablespace: 
+--
+
+ALTER TABLE ONLY test
+    ADD CONSTRAINT primary_id PRIMARY KEY (id);
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: apple
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM apple;
+GRANT ALL ON SCHEMA public TO apple;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\connect template1
+
+SET default_transaction_read_only = off;
+
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: template1; Type: COMMENT; Schema: -; Owner: apple
+--
+
+COMMENT ON DATABASE template1 IS 'default template for new databases';
+
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: apple
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM apple;
+GRANT ALL ON SCHEMA public TO apple;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+--
+-- PostgreSQL database cluster dump complete
+--
+
