@@ -246,6 +246,25 @@ END$$;
 
 ALTER FUNCTION public.test_get(arg_name text) OWNER TO apple;
 
+--
+-- Name: test_update(bigint, text); Type: FUNCTION; Schema: public; Owner: apple
+--
+
+CREATE FUNCTION test_update(arg_id bigint, arg_name text) RETURNS json
+    LANGUAGE plpgsql
+    AS $$DECLARE
+    retval json;
+    sql_prepare text;
+BEGIN
+    UPDATE test SET name = arg_name WHERE id = arg_id;
+    sql_prepare := ' test WHERE id = ' || arg_id;
+    SELECT* FROM rows_to_json( arg_sql:= sql_prepare ) into retval;
+    RETURN retval;
+END$$;
+
+
+ALTER FUNCTION public.test_update(arg_id bigint, arg_name text) OWNER TO apple;
+
 SET default_tablespace = '';
 
 SET default_with_oids = false;
@@ -295,7 +314,6 @@ ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('test_id_seq'::regclas
 --
 
 COPY test (id, name) FROM stdin;
-1	test
 2	testw
 3	testwwww
 4	test
@@ -307,6 +325,8 @@ COPY test (id, name) FROM stdin;
 10	123
 11	test
 12	testerererer
+13	666
+1	123
 \.
 
 
@@ -314,7 +334,7 @@ COPY test (id, name) FROM stdin;
 -- Name: test_id_seq; Type: SEQUENCE SET; Schema: public; Owner: apple
 --
 
-SELECT pg_catalog.setval('test_id_seq', 12, true);
+SELECT pg_catalog.setval('test_id_seq', 13, true);
 
 
 --
