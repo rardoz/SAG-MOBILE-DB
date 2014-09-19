@@ -223,6 +223,22 @@ END$$;
 ALTER FUNCTION public.test_create(arg_name text) OWNER TO apple;
 
 --
+-- Name: test_delete(bigint); Type: FUNCTION; Schema: public; Owner: apple
+--
+
+CREATE FUNCTION test_delete(arg_id bigint) RETURNS json
+    LANGUAGE plpgsql
+    AS $$DECLARE
+    something json;
+BEGIN
+    DELETE FROM test WHERE id = arg_id;
+    RETURN ('[{"success": true}]')::json;
+END$$;
+
+
+ALTER FUNCTION public.test_delete(arg_id bigint) OWNER TO apple;
+
+--
 -- Name: test_get(text); Type: FUNCTION; Schema: public; Owner: apple
 --
 
@@ -316,7 +332,6 @@ ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('test_id_seq'::regclas
 COPY test (id, name) FROM stdin;
 2	testw
 3	testwwww
-4	test
 5	123
 6	123
 7	123
@@ -326,7 +341,7 @@ COPY test (id, name) FROM stdin;
 11	test
 12	testerererer
 13	666
-1	123
+4	123
 \.
 
 
